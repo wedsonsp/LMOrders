@@ -1,0 +1,6 @@
+@LMOrders.Api_HostAddress = http://localhost:5016
+
+GET {{LMOrders.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
