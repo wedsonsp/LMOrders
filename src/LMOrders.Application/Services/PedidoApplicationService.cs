@@ -1,5 +1,6 @@
 using AutoMapper;
 using LMOrders.Application.DTOs;
+using LMOrders.Application.Events;
 using LMOrders.Application.Interfaces.Integrations;
 using LMOrders.Application.Interfaces.Services;
 using LMOrders.Domain.Entities;
@@ -14,17 +15,23 @@ public class PedidoApplicationService : IPedidoApplicationService
     private readonly IPedidoRepository _pedidoRepository;
     private readonly IPedidoItemRepository _pedidoItemRepository;
     private readonly IBillingIntegrationService _billingIntegrationService;
+    private readonly IKafkaProducerService _kafkaProducerService;
+    private readonly IKafkaTopicResolver _kafkaTopicResolver;
 
     public PedidoApplicationService(
         IMapper mapper,
         IPedidoRepository pedidoRepository,
         IPedidoItemRepository pedidoItemRepository,
-        IBillingIntegrationService billingIntegrationService)
+        IBillingIntegrationService billingIntegrationService,
+        IKafkaProducerService kafkaProducerService,
+        IKafkaTopicResolver kafkaTopicResolver)
     {
         _mapper = mapper;
         _pedidoRepository = pedidoRepository;
         _pedidoItemRepository = pedidoItemRepository;
         _billingIntegrationService = billingIntegrationService;
+        _kafkaProducerService = kafkaProducerService;
+        _kafkaTopicResolver = kafkaTopicResolver;
     }
 
     public async Task<PedidoResponse> CriarAsync(CriarPedidoRequest request, CancellationToken cancellationToken = default)
@@ -66,6 +73,16 @@ public class PedidoApplicationService : IPedidoApplicationService
         }
 
         await _billingIntegrationService.NotifyAsync(pedido, cancellationToken);
+
+        var evento = new PedidoCriadoEvent(
+            pedido.Id,
+            pedido.ClienteId,
+            pedido.DataPedido,
+            pedido.ValorTotal,
+            pedido.Itens.Select(item => new PedidoCriadoItemEvent(item.ProdutoId, item.Produto, item.Quantidade, item.ValorUnitario)).ToList());
+
+        var topic = _kafkaTopicResolver.GetPedidoCriadoTopic();
+        await _kafkaProducerService.ProduceAsync(topic, evento, cancellationToken);
 
         return _mapper.Map<PedidoResponse>(pedido);
     }

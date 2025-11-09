@@ -2,6 +2,7 @@ using System.Threading.Channels;
 using LMOrders.Application.Interfaces.Integrations;
 using LMOrders.Domain.Interfaces.Repositories;
 using LMOrders.Infrastructure.Messaging;
+using LMOrders.Infrastructure.Messaging.Kafka;
 using LMOrders.Infrastructure.Mongo.Repositories;
 using LMOrders.Infrastructure.Options;
 using LMOrders.Infrastructure.Persistence.DbContexts;
@@ -26,6 +27,7 @@ public static class ServiceCollectionExtensions
                 sqlOptions => sqlOptions.MigrationsAssembly(typeof(PedidosDbContext).Assembly.FullName)));
 
         services.Configure<MongoOptions>(configuration.GetSection(MongoOptions.SectionName));
+        services.Configure<KafkaOptions>(configuration.GetSection(KafkaOptions.SectionName));
 
         services.AddSingleton<IMongoClient>(provider =>
         {
@@ -57,6 +59,10 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<IBillingIntegrationService, BillingIntegrationService>();
         services.AddHostedService<BillingMessageDispatcher>();
+
+        services.AddSingleton<IKafkaTopicResolver, KafkaTopicResolver>();
+        services.AddSingleton<IKafkaProducerService, KafkaProducerService>();
+        services.AddHostedService<PedidoCriadoConsumerService>();
 
         return services;
     }

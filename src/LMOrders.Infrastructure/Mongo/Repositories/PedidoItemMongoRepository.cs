@@ -3,6 +3,7 @@ using LMOrders.Domain.Interfaces.Repositories;
 using LMOrders.Infrastructure.Mongo.Documents;
 using LMOrders.Infrastructure.Options;
 using Microsoft.Extensions.Options;
+using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace LMOrders.Infrastructure.Mongo.Repositories;
@@ -44,6 +45,10 @@ public class PedidoItemMongoRepository : IPedidoItemRepository
         };
 
         var filter = Builders<PedidoItensDocument>.Filter.Eq(doc => doc.PedidoId, pedidoId);
+
+        var existing = await _collection.Find(filter).FirstOrDefaultAsync(cancellationToken);
+        document.Id = existing?.Id ?? ObjectId.GenerateNewId().ToString();
+
         await _collection.ReplaceOneAsync(filter, document, new ReplaceOptions { IsUpsert = true }, cancellationToken);
     }
 

@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using FluentAssertions;
+using LMOrders.Test.Fakes;
 using LMOrders.Test.Models;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -43,6 +44,10 @@ public class PedidosEndpointsTests : IClassFixture<PedidoApiFactory>
         pedido.ClienteId.Should().Be(123);
         pedido.Itens.Should().HaveCount(1);
         pedido.ValorTotal.Should().Be(1999.99m);
+
+        using var scope = _factory.Services.CreateScope();
+        var fakeProducer = scope.ServiceProvider.GetRequiredService<FakeKafkaProducerService>();
+        fakeProducer.ProducedMessages.Should().ContainSingle(msg => msg.Topic == "test-pedidos-criados");
     }
 
     [Fact]

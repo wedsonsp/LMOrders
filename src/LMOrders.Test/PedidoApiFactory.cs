@@ -1,5 +1,8 @@
+using System.Linq;
+using LMOrders.Application.Interfaces.Integrations;
 using LMOrders.Domain.Interfaces.Repositories;
 using LMOrders.Infrastructure.Persistence.DbContexts;
+using LMOrders.Test.Fakes;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -36,8 +39,26 @@ public class PedidoApiFactory : WebApplicationFactory<Program>
                 services.Remove(itensRepositoryDescriptor);
             }
 
+            var kafkaProducerDescriptor = services.SingleOrDefault(
+                d => d.ServiceType == typeof(IKafkaProducerService));
+            if (kafkaProducerDescriptor is not null)
+            {
+                services.Remove(kafkaProducerDescriptor);
+            }
+
+            var kafkaTopicResolverDescriptor = services.SingleOrDefault(
+                d => d.ServiceType == typeof(IKafkaTopicResolver));
+            if (kafkaTopicResolverDescriptor is not null)
+            {
+                services.Remove(kafkaTopicResolverDescriptor);
+            }
+ 
             services.AddSingleton<InMemoryPedidoItemRepository>();
             services.AddSingleton<IPedidoItemRepository>(provider => provider.GetRequiredService<InMemoryPedidoItemRepository>());
+
+            services.AddSingleton<FakeKafkaProducerService>();
+            services.AddSingleton<IKafkaProducerService>(provider => provider.GetRequiredService<FakeKafkaProducerService>());
+            services.AddSingleton<IKafkaTopicResolver, FakeKafkaTopicResolver>();
 
             using var scope = services.BuildServiceProvider().CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<PedidosDbContext>();
