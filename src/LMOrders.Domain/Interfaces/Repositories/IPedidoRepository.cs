@@ -6,5 +6,6 @@ public interface IPedidoRepository
 {
     Task AdicionarAsync(Pedido pedido, CancellationToken cancellationToken = default);
     Task<Pedido?> ObterPorIdAsync(int id, CancellationToken cancellationToken = default);
+    Task RemoverAsync(int id, CancellationToken cancellationToken = default);
 }
 

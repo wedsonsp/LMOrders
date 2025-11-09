@@ -12,15 +12,18 @@ public class PedidoApplicationService : IPedidoApplicationService
 {
     private readonly IMapper _mapper;
     private readonly IPedidoRepository _pedidoRepository;
+    private readonly IPedidoItemRepository _pedidoItemRepository;
     private readonly IBillingIntegrationService _billingIntegrationService;
 
     public PedidoApplicationService(
         IMapper mapper,
         IPedidoRepository pedidoRepository,
+        IPedidoItemRepository pedidoItemRepository,
         IBillingIntegrationService billingIntegrationService)
     {
         _mapper = mapper;
         _pedidoRepository = pedidoRepository;
+        _pedidoItemRepository = pedidoItemRepository;
         _billingIntegrationService = billingIntegrationService;
     }
 
@@ -47,6 +50,21 @@ public class PedidoApplicationService : IPedidoApplicationService
 
         await _pedidoRepository.AdicionarAsync(pedido, cancellationToken);
 
+        try
+        {
+            foreach (var item in pedido.Itens)
+            {
+                item.AssociarPedido(pedido.Id);
+            }
+
+            await _pedidoItemRepository.SalvarItensAsync(pedido.Id, pedido.Itens, cancellationToken);
+        }
+        catch
+        {
+            await _pedidoRepository.RemoverAsync(pedido.Id, cancellationToken);
+            throw;
+        }
+
         await _billingIntegrationService.NotifyAsync(pedido, cancellationToken);
 
         return _mapper.Map<PedidoResponse>(pedido);
@@ -56,7 +74,19 @@ public class PedidoApplicationService : IPedidoApplicationService
     {
         var pedido = await _pedidoRepository.ObterPorIdAsync(id, cancellationToken);
 
-        return pedido is null ? null : _mapper.Map<PedidoResponse>(pedido);
+        if (pedido is null)
+        {
+            return null;
+        }
+
+        var itens = await _pedidoItemRepository.ObterPorPedidoIdAsync(id, cancellationToken);
+
+        foreach (var item in itens)
+        {
+            pedido.AdicionarItem(item);
+        }
+
+        return _mapper.Map<PedidoResponse>(pedido);
     }
 }
 

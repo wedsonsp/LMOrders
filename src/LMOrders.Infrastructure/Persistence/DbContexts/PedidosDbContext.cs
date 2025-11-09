@@ -11,7 +11,6 @@ public class PedidosDbContext : DbContext
     }
 
     public DbSet<Pedido> Pedidos => Set<Pedido>();
-    public DbSet<PedidoItem> PedidoItens => Set<PedidoItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

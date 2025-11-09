@@ -4,8 +4,6 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using FluentAssertions;
 using LMOrders.Test.Models;
-using LMOrders.Infrastructure.Persistence.DbContexts;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LMOrders.Test;
@@ -69,10 +67,9 @@ public class PedidosEndpointsTests : IClassFixture<PedidoApiFactory>
 
         using (var scope = _factory.Services.CreateScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<PedidosDbContext>();
-            var existe = await db.Pedidos.Include(p => p.Itens).SingleOrDefaultAsync(p => p.Id == criado.Id);
-            existe.Should().NotBeNull();
-            existe!.Itens.Should().HaveCount(1);
+            var repository = scope.ServiceProvider.GetRequiredService<InMemoryPedidoItemRepository>();
+            var itensSalvos = await repository.ObterPorPedidoIdAsync(criado.Id);
+            itensSalvos.Should().HaveCount(1);
         }
 
         var getResponse = await _client.GetAsync($"/api/v1/pedidos/{criado.Id}");

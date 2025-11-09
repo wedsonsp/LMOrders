@@ -1,3 +1,4 @@
+using LMOrders.Domain.Interfaces.Repositories;
 using LMOrders.Infrastructure.Persistence.DbContexts;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -26,6 +27,17 @@ public class PedidoApiFactory : WebApplicationFactory<Program>
             {
                 options.UseInMemoryDatabase(_databaseName);
             });
+
+            var itensRepositoryDescriptor = services.SingleOrDefault(
+                d => d.ServiceType == typeof(IPedidoItemRepository));
+
+            if (itensRepositoryDescriptor is not null)
+            {
+                services.Remove(itensRepositoryDescriptor);
+            }
+
+            services.AddSingleton<InMemoryPedidoItemRepository>();
+            services.AddSingleton<IPedidoItemRepository>(provider => provider.GetRequiredService<InMemoryPedidoItemRepository>());
 
             using var scope = services.BuildServiceProvider().CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<PedidosDbContext>();

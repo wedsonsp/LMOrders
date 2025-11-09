@@ -51,58 +51,6 @@ namespace LMOrders.Infrastructure.Migrations
 
                     b.ToTable("Pedidos", (string)null);
                 });
-
-            modelBuilder.Entity("LMOrders.Domain.Entities.PedidoItem", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("PedidoId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Produto")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<int>("ProdutoId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("Quantidade")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<decimal>("ValorUnitario")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("PedidoId");
-
-                    b.ToTable("PedidoItens", (string)null);
-                });
-
-            modelBuilder.Entity("LMOrders.Domain.Entities.PedidoItem", b =>
-                {
-                    b.HasOne("LMOrders.Domain.Entities.Pedido", null)
-                        .WithMany("Itens")
-                        .HasForeignKey("PedidoId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("LMOrders.Domain.Entities.Pedido", b =>
-                {
-                    b.Navigation("Itens");
-                });
 #pragma warning restore 612, 618
         }
     }

@@ -38,11 +38,7 @@ public class PedidoConfiguration : IEntityTypeConfiguration<Pedido>
             .IsRequired();
 
         builder.Ignore(pedido => pedido.ValorTotal);
-
-        builder.HasMany(pedido => pedido.Itens)
-            .WithOne()
-            .HasForeignKey(item => item.PedidoId)
-            .OnDelete(DeleteBehavior.Cascade);
+        builder.Ignore(pedido => pedido.Itens);
     }
 }
 

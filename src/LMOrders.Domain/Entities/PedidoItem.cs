@@ -22,6 +22,17 @@ public class PedidoItem : BaseEntity
     public decimal ValorUnitario { get; private set; }
     public decimal Total => Quantidade * ValorUnitario;
 
+    public void AssociarPedido(int pedidoId)
+    {
+        if (pedidoId <= 0)
+        {
+            throw new DomainException("O identificador do pedido é obrigatório.");
+        }
+
+        PedidoId = pedidoId;
+        Touch();
+    }
+
     public void AtualizarProduto(int produtoId, string produto)
     {
         if (produtoId <= 0)

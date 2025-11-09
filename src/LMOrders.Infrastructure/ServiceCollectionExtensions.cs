@@ -2,11 +2,15 @@ using System.Threading.Channels;
 using LMOrders.Application.Interfaces.Integrations;
 using LMOrders.Domain.Interfaces.Repositories;
 using LMOrders.Infrastructure.Messaging;
+using LMOrders.Infrastructure.Mongo.Repositories;
+using LMOrders.Infrastructure.Options;
 using LMOrders.Infrastructure.Persistence.DbContexts;
 using LMOrders.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using MongoDB.Driver;
 
 namespace LMOrders.Infrastructure;
 
@@ -21,7 +25,22 @@ public static class ServiceCollectionExtensions
                 configuration.GetConnectionString("DefaultConnection"),
                 sqlOptions => sqlOptions.MigrationsAssembly(typeof(PedidosDbContext).Assembly.FullName)));
 
+        services.Configure<MongoOptions>(configuration.GetSection(MongoOptions.SectionName));
+
+        services.AddSingleton<IMongoClient>(provider =>
+        {
+            var options = provider.GetRequiredService<IOptions<MongoOptions>>().Value;
+
+            if (string.IsNullOrWhiteSpace(options.ConnectionString))
+            {
+                throw new InvalidOperationException("A connection string do MongoDB não foi configurada.");
+            }
+
+            return new MongoClient(options.ConnectionString);
+        });
+
         services.AddScoped<IPedidoRepository, PedidoRepository>();
+        services.AddScoped<IPedidoItemRepository, PedidoItemMongoRepository>();
 
         services.AddSingleton(provider =>
         {
