@@ -68,12 +68,28 @@ Swagger: `https://localhost:5001/swagger`.
    ```
 4. **MongoDB** – inspecione itens:
    ```powershell
-   docker exec -it mongo-lmorders mongosh "mongodb://localhost:27017" --eval "db.getSiblingDB('lmorders').pedido_itens.find().pretty()"
+   docker exec -it mongo-lmorders mongosh
+   ```
+   Dentro do shell (`>`), execute:
+   ```javascript
+   show dbs                 // listar bancos
+   use lmorders             // acessar banco
+   show collections         // listar coleções
+   db.pedido_itens.find().pretty()   // visualizar documentos
+   db.pedido_itens.countDocuments()  // contar documentos
+   db.pedido_itens.drop()            // remover a coleção
+   db.dropDatabase()                 // remover o banco (se necessário)
    ```
 5. **Redis (cache)** – veja chaves/mensagens:
    ```powershell
    docker exec -it redis redis-cli keys "lmorders:pedido:*"
    ```
+5. **SQL Server** – limpar pedidos (se necessário):
+   ```sql
+   DELETE FROM Pedidos;
+   DBCC CHECKIDENT ('Pedidos', RESEED, 0); -- reinicia a sequência da PK
+   ```
+   > Alternativa: dropar o banco inteiro (`DROP DATABASE LMOrders;`). Ao executar a API ou rodar `dotnet ef database update`, a migration existente recria todas as tabelas. Crie novas migrations apenas quando houver mudanças de esquema (novas colunas/tabelas/relacionamentos).
 
 ## Decisões técnicas
 - **Persistência híbrida**: permite escalar itens de pedidos (documento) sem comprometer integridade do cabeçalho relacional.
