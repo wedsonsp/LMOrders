@@ -29,6 +29,20 @@ public static class ServiceCollectionExtensions
         services.Configure<MongoOptions>(configuration.GetSection(MongoOptions.SectionName));
         services.Configure<KafkaOptions>(configuration.GetSection(KafkaOptions.SectionName));
 
+        var redisConnection = configuration.GetConnectionString("Redis");
+        if (string.IsNullOrWhiteSpace(redisConnection))
+        {
+            services.AddDistributedMemoryCache();
+        }
+        else
+        {
+            services.AddStackExchangeRedisCache(options =>
+            {
+                options.Configuration = redisConnection;
+                options.InstanceName = "lmorders:";
+            });
+        }
+
         services.AddSingleton<IMongoClient>(provider =>
         {
             var options = provider.GetRequiredService<IOptions<MongoOptions>>().Value;

@@ -6,6 +6,7 @@ using LMOrders.Test.Fakes;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LMOrders.Test;
@@ -52,7 +53,16 @@ public class PedidoApiFactory : WebApplicationFactory<Program>
             {
                 services.Remove(kafkaTopicResolverDescriptor);
             }
- 
+
+            var distributedCacheDescriptor = services.SingleOrDefault(
+                d => d.ServiceType == typeof(IDistributedCache));
+            if (distributedCacheDescriptor is not null)
+            {
+                services.Remove(distributedCacheDescriptor);
+            }
+
+            services.AddDistributedMemoryCache();
+
             services.AddSingleton<InMemoryPedidoItemRepository>();
             services.AddSingleton<IPedidoItemRepository>(provider => provider.GetRequiredService<InMemoryPedidoItemRepository>());
 

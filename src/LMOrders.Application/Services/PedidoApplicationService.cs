@@ -6,6 +6,8 @@ using LMOrders.Application.Interfaces.Services;
 using LMOrders.Domain.Entities;
 using LMOrders.Domain.Exceptions;
 using LMOrders.Domain.Interfaces.Repositories;
+using Microsoft.Extensions.Caching.Distributed;
+using System.Text.Json;
 
 namespace LMOrders.Application.Services;
 
@@ -17,6 +19,12 @@ public class PedidoApplicationService : IPedidoApplicationService
     private readonly IBillingIntegrationService _billingIntegrationService;
     private readonly IKafkaProducerService _kafkaProducerService;
     private readonly IKafkaTopicResolver _kafkaTopicResolver;
+    private readonly IDistributedCache _cache;
+    private static readonly JsonSerializerOptions CacheSerializerOptions = new(JsonSerializerDefaults.Web);
+    private static readonly DistributedCacheEntryOptions CacheEntryOptions = new()
+    {
+        AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(2)
+    };
 
     public PedidoApplicationService(
         IMapper mapper,
@@ -24,7 +32,8 @@ public class PedidoApplicationService : IPedidoApplicationService
         IPedidoItemRepository pedidoItemRepository,
         IBillingIntegrationService billingIntegrationService,
         IKafkaProducerService kafkaProducerService,
-        IKafkaTopicResolver kafkaTopicResolver)
+        IKafkaTopicResolver kafkaTopicResolver,
+        IDistributedCache cache)
     {
         _mapper = mapper;
         _pedidoRepository = pedidoRepository;
@@ -32,6 +41,7 @@ public class PedidoApplicationService : IPedidoApplicationService
         _billingIntegrationService = billingIntegrationService;
         _kafkaProducerService = kafkaProducerService;
         _kafkaTopicResolver = kafkaTopicResolver;
+        _cache = cache;
     }
 
     public async Task<PedidoResponse> CriarAsync(CriarPedidoRequest request, CancellationToken cancellationToken = default)
@@ -84,11 +94,26 @@ public class PedidoApplicationService : IPedidoApplicationService
         var topic = _kafkaTopicResolver.GetPedidoCriadoTopic();
         await _kafkaProducerService.ProduceAsync(topic, evento, cancellationToken);
 
-        return _mapper.Map<PedidoResponse>(pedido);
+        var response = _mapper.Map<PedidoResponse>(pedido);
+        await CacheResponseAsync(response, cancellationToken);
+
+        return response;
     }
 
     public async Task<PedidoResponse?> ObterPorIdAsync(int id, CancellationToken cancellationToken = default)
     {
+        var cacheKey = GetCacheKey(id);
+        var cached = await _cache.GetStringAsync(cacheKey, cancellationToken);
+
+        if (!string.IsNullOrWhiteSpace(cached))
+        {
+            var cachedResponse = JsonSerializer.Deserialize<PedidoResponse>(cached, CacheSerializerOptions);
+            if (cachedResponse is not null)
+            {
+                return cachedResponse;
+            }
+        }
+
         var pedido = await _pedidoRepository.ObterPorIdAsync(id, cancellationToken);
 
         if (pedido is null)
@@ -103,7 +128,19 @@ public class PedidoApplicationService : IPedidoApplicationService
             pedido.AdicionarItem(item);
         }
 
-        return _mapper.Map<PedidoResponse>(pedido);
+        var response = _mapper.Map<PedidoResponse>(pedido);
+        await CacheResponseAsync(response, cancellationToken);
+
+        return response;
     }
+
+    private async Task CacheResponseAsync(PedidoResponse response, CancellationToken cancellationToken)
+    {
+        var cacheKey = GetCacheKey(response.Id);
+        var payload = JsonSerializer.Serialize(response, CacheSerializerOptions);
+        await _cache.SetStringAsync(cacheKey, payload, CacheEntryOptions, cancellationToken);
+    }
+
+    private static string GetCacheKey(int pedidoId) => $"pedido:{pedidoId}";
 }
 
